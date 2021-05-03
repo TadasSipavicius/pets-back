@@ -46,10 +46,42 @@ describe('GraphQL animal integration tests', () => {
                     console.log(res.body);
                     return done(err);
                 }
-                const { body: { data: { animals } } } = res;
+                const {
+                    body: {
+                        data: { animals },
+                    },
+                } = res;
                 expect(animals).to.be.an('array');
                 validate(animals[0]);
                 expect(animals).to.have.length.above(4);
+                return done();
+            });
+    });
+
+    it('Returns animals by array of ids [1,2,3] with all fields', (done) => {
+        request
+            .post('/graphql')
+            .send({
+                query: `{ animals (ids: [1,2,3])
+                      ${animalFields}
+                  }`,
+            })
+            .set('Authorization', `Bearer ${process.env.BEARER_TOKEN}`)
+            .expect(200)
+            .end((err, res) => {
+                if (err) {
+                    // eslint-disable-next-line no-console
+                    console.log(res.body);
+                    return done(err);
+                }
+                const {
+                    body: {
+                        data: { animals },
+                    },
+                } = res;
+                expect(animals).to.be.an('array');
+                validate(animals[0]);
+                expect(animals).to.have.length(3);
                 return done();
             });
     });
@@ -60,6 +92,7 @@ describe('animal mutations tests', () => {
     const registrationNumberUpdate = `2021PandemicC19X${uuidv4()}`;
     const date = '2021-01-01';
     const dateIntString = new Date(date).getTime().toString();
+    let animalId = -1;
 
     it('Create animal', (done) => {
         const mutation = 'createAnimal';
@@ -99,6 +132,8 @@ describe('animal mutations tests', () => {
                     console.log(res.body);
                     return done(err);
                 }
+                // eslint-disable-next-line prefer-destructuring
+                animalId = res.body.data[mutation].id;
                 expect(res.body.data[mutation]).to.deep.include(answer);
                 return done();
             });
@@ -151,8 +186,8 @@ describe('animal mutations tests', () => {
 
     it('Delete animal', (done) => {
         const mutation = 'deleteAnimal';
-        const deleteInput = '{ id: 5 }';
-        const expectedResponse = { id: 5 };
+        const deleteInput = `{ id: ${animalId} }`;
+        const expectedResponse = { id: animalId };
 
         request
             .post('/graphql')
